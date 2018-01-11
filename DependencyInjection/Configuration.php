@@ -13,13 +13,11 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  */
 class Configuration implements ConfigurationInterface
 {
-    protected $supportedDbDrivers = array('orm', 'mongodb', 'propel', 'phpcr');
-    protected $supportedStorages = array('gaufrette', 'flysystem', 'file_system');
+    protected $supportedDbDrivers = ['orm', 'mongodb', 'propel', 'phpcr'];
+    protected $supportedStorages = ['gaufrette', 'flysystem', 'file_system'];
 
     /**
-     * Gets the configuration tree builder for the extension.
-     *
-     * @return Tree The configuration tree builder
+     * {@inheritdoc}
      */
     public function getConfigTreeBuilder()
     {
@@ -44,11 +42,13 @@ class Configuration implements ConfigurationInterface
                     ->isRequired()
                     ->beforeNormalization()
                         ->ifString()
-                        ->then(function ($v) { return strtolower($v); })
+                        ->then(function ($v) {
+                            return strtolower($v);
+                        })
                     ->end()
                     ->validate()
                         ->ifNotInArray($this->supportedDbDrivers)
-                        ->thenInvalid('The db driver %s is not supported. Please choose one of ' . implode(', ', $this->supportedDbDrivers))
+                        ->thenInvalid('The db driver %s is not supported. Please choose one of '.implode(', ', $this->supportedDbDrivers))
                     ->end()
                 ->end()
                 ->scalarNode('db_connection')->defaultNull()->end()
@@ -56,14 +56,20 @@ class Configuration implements ConfigurationInterface
                     ->defaultValue('file_system')
                     ->beforeNormalization()
                         ->ifString()
-                        ->then(function ($v) { return strtolower($v); })
+                        ->then(function ($v) {
+                            return strtolower($v);
+                        })
                     ->end()
                     ->validate()
-                        ->ifNotInArray($this->supportedStorages)
-                        ->thenInvalid('The storage %s is not supported. Please choose one of ' . implode(', ', $this->supportedStorages))
+                        ->ifTrue(function ($storage) {
+                            return 0 !== strpos($storage, '@') && !in_array($storage, $this->supportedStorages, true);
+                        })
+                        ->thenInvalid('The storage %s is not supported. Please choose one of '.implode(', ', $this->supportedStorages).' or provide a service name prefixed with "@".')
                     ->end()
                 ->end()
-                ->scalarNode('twig')->defaultTrue()->end()
+            ->scalarNode('templating')->defaultTrue()->end()
+            ->scalarNode('twig')->defaultTrue()->info('twig requires templating')->end()
+            ->scalarNode('form')->defaultTrue()->end()
             ->end()
         ;
     }
@@ -107,8 +113,32 @@ class Configuration implements ConfigurationInterface
                         ->children()
                             ->scalarNode('uri_prefix')->defaultValue('/uploads')->end()
                             ->scalarNode('upload_destination')->isRequired()->end()
-                            ->scalarNode('namer')->defaultNull()->end()
-                            ->scalarNode('directory_namer')->defaultNull()->end()
+                            ->arrayNode('namer')
+                                ->addDefaultsIfNotSet()
+                                ->beforeNormalization()
+                                    ->ifString()
+                                    ->then(function ($v) {
+                                        return ['service' => $v, 'options' => []];
+                                    })
+                                ->end()
+                                ->children()
+                                ->scalarNode('service')->defaultNull()->end()
+                                ->variableNode('options')->defaultNull()->end()
+                                ->end()
+                            ->end()
+                            ->arrayNode('directory_namer')
+                                ->addDefaultsIfNotSet()
+                                ->beforeNormalization()
+                                    ->ifString()
+                                    ->then(function ($v) {
+                                        return ['service' => $v, 'options' => []];
+                                    })
+                                ->end()
+                                ->children()
+                                ->scalarNode('service')->defaultNull()->end()
+                                ->variableNode('options')->defaultNull()->end()
+                                ->end()
+                            ->end()
                             ->scalarNode('delete_on_remove')->defaultTrue()->end()
                             ->scalarNode('delete_on_update')->defaultTrue()->end()
                             ->scalarNode('inject_on_load')->defaultFalse()->end()
@@ -116,11 +146,13 @@ class Configuration implements ConfigurationInterface
                                 ->defaultNull()
                                 ->beforeNormalization()
                                     ->ifString()
-                                    ->then(function ($v) { return strtolower($v); })
+                                    ->then(function ($v) {
+                                        return strtolower($v);
+                                    })
                                 ->end()
                                 ->validate()
                                     ->ifNotInArray($this->supportedDbDrivers)
-                                    ->thenInvalid('The db driver %s is not supported. Please choose one of ' . implode(', ', $this->supportedDbDrivers))
+                                    ->thenInvalid('The db driver %s is not supported. Please choose one of '.implode(', ', $this->supportedDbDrivers))
                                 ->end()
                             ->end()
                             ->scalarNode('db_connection')->defaultNull()->end()

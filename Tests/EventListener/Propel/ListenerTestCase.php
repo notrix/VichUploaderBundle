@@ -2,6 +2,11 @@
 
 namespace Vich\UploaderBundle\Tests\EventListener\Propel;
 
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\EventDispatcher\GenericEvent;
+use Vich\UploaderBundle\Adapter\AdapterInterface;
+use Vich\UploaderBundle\Handler\UploadHandler;
+use Vich\UploaderBundle\Metadata\MetadataReader;
 use Vich\UploaderBundle\Tests\DummyEntity;
 
 /**
@@ -9,28 +14,28 @@ use Vich\UploaderBundle\Tests\DummyEntity;
  *
  * @author Kévin Gomez <contact@kevingomez.fr>
  */
-class ListenerTestCase extends \PHPUnit_Framework_TestCase
+class ListenerTestCase extends TestCase
 {
     const FIELD_NAME = 'file';
     const MAPPING_NAME = 'mapping_name';
 
     /**
-     * @var \Vich\UploaderBundle\Adapter\AdapterInterface $adapter
+     * @var AdapterInterface
      */
     protected $adapter;
 
     /**
-     * @var \Vich\UploaderBundle\Handler\UploadHandler $handler
+     * @var UploadHandler
      */
     protected $handler;
 
     /**
-     * @var MetadataReader $metadata
+     * @var MetadataReader
      */
     protected $metadata;
 
     /**
-     * @var PropelUploaderListener $listener
+     * @var PropelUploaderListener
      */
     protected $listener;
 
@@ -45,9 +50,9 @@ class ListenerTestCase extends \PHPUnit_Framework_TestCase
     protected $object;
 
     /**
-     * Sets up the test
+     * Sets up the test.
      */
-    public function setUp()
+    protected function setUp()
     {
         $this->adapter = $this->getAdapterMock();
         $this->handler = $this->getHandlerMock();
@@ -66,25 +71,25 @@ class ListenerTestCase extends \PHPUnit_Framework_TestCase
             ->expects($this->any())
             ->method('getUploadableFields')
             ->with('Vich\UploaderBundle\Tests\DummyEntity', self::MAPPING_NAME)
-            ->will($this->returnValue(array(
-                array('propertyName' => self::FIELD_NAME)
-            )));
+            ->will($this->returnValue([
+                ['propertyName' => self::FIELD_NAME],
+            ]));
     }
 
     /**
      * Creates a mock adapter.
      *
-     * @return \Vich\UploaderBundle\Adapter\AdapterInterface The mock adapter.
+     * @return AdapterInterface The mock adapter
      */
     protected function getAdapterMock()
     {
-        return $this->getMock('Vich\UploaderBundle\Adapter\AdapterInterface');
+        return $this->createMock('Vich\UploaderBundle\Adapter\AdapterInterface');
     }
 
     /**
      * Creates a mock handler.
      *
-     * @return \Vich\UploaderBundle\Handler\UploadHandler The handler mock.
+     * @return UploadHandler The handler mock
      */
     protected function getHandlerMock()
     {
@@ -96,7 +101,7 @@ class ListenerTestCase extends \PHPUnit_Framework_TestCase
     /**
      * Creates a mock event.
      *
-     * @return \Symfony\Component\EventDispatcher\GenericEvent The mock event.
+     * @return GenericEvent The mock event
      */
     protected function getEventMock()
     {
@@ -108,7 +113,7 @@ class ListenerTestCase extends \PHPUnit_Framework_TestCase
     /**
      * Creates a mock metadata reader.
      *
-     * @return \Vich\UploaderBundle\Metadata\MetadataReader The mock metadata reader.
+     * @return MetadataReader The mock metadata reader
      */
     protected function getMetadataReaderMock()
     {

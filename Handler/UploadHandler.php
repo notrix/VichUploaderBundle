@@ -4,10 +4,8 @@ namespace Vich\UploaderBundle\Handler;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-
 use Vich\UploaderBundle\Event\Event;
 use Vich\UploaderBundle\Event\Events;
-use Vich\UploaderBundle\Exception\MappingNotFoundException;
 use Vich\UploaderBundle\Injector\FileInjectorInterface;
 use Vich\UploaderBundle\Mapping\PropertyMapping;
 use Vich\UploaderBundle\Mapping\PropertyMappingFactory;
@@ -18,40 +16,30 @@ use Vich\UploaderBundle\Storage\StorageInterface;
  *
  * @author Kévin Gomez <contact@kevingomez.fr>
  */
-class UploadHandler
+class UploadHandler extends AbstractHandler
 {
     /**
-     * @var \Vich\UploaderBundle\Mapping\PropertyMappingFactory
-     */
-    protected $factory;
-
-    /**
-     * @var \Vich\UploaderBundle\Storage\StorageInterface $storage
-     */
-    protected $storage;
-
-    /**
-     * @var \Vich\UploaderBundle\Injector\FileInjectorInterface $injector
+     * @var FileInjectorInterface
      */
     protected $injector;
 
     /**
-     * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
+     * @var EventDispatcherInterface
      */
     protected $dispatcher;
 
     /**
      * Constructs a new instance of UploaderListener.
      *
-     * @param \Vich\UploaderBundle\Mapping\PropertyMappingFactory         $factory    The mapping factory.
-     * @param \Vich\UploaderBundle\Storage\StorageInterface               $storage    The storage.
-     * @param \Vich\UploaderBundle\Injector\FileInjectorInterface         $injector   The injector.
-     * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher The event dispatcher.
+     * @param PropertyMappingFactory   $factory    The mapping factory
+     * @param StorageInterface         $storage    The storage
+     * @param FileInjectorInterface    $injector   The injector
+     * @param EventDispatcherInterface $dispatcher The event dispatcher
      */
     public function __construct(PropertyMappingFactory $factory, StorageInterface $storage, FileInjectorInterface $injector, EventDispatcherInterface $dispatcher)
     {
-        $this->factory = $factory;
-        $this->storage = $storage;
+        parent::__construct($factory, $storage);
+
         $this->injector = $injector;
         $this->dispatcher = $dispatcher;
     }
@@ -59,8 +47,8 @@ class UploadHandler
     /**
      * Checks for file to upload.
      *
-     * @param object $obj       The object.
-     * @param string $fieldName The name of the field containing the upload (has to be mapped).
+     * @param object $obj       The object
+     * @param string $fieldName The name of the field containing the upload (has to be mapped)
      */
     public function upload($obj, $fieldName)
     {
@@ -105,11 +93,17 @@ class UploadHandler
     public function remove($obj, $fieldName)
     {
         $mapping = $this->getMapping($obj, $fieldName);
+        $oldFilename = $mapping->getFileName($obj);
+
+        // nothing to remove, avoid dispatching useless events
+        if (empty($oldFilename)) {
+            return;
+        }
 
         $this->dispatch(Events::PRE_REMOVE, new Event($obj, $mapping));
 
         $this->storage->remove($obj, $mapping);
-        $mapping->setFileName($obj, null);
+        $mapping->erase($obj);
 
         $this->dispatch(Events::POST_REMOVE, new Event($obj, $mapping));
     }
@@ -119,21 +113,10 @@ class UploadHandler
         $this->dispatcher->dispatch($eventName, $event);
     }
 
-    protected function getMapping($obj, $fieldName)
-    {
-        $mapping = $this->factory->fromField($obj, $fieldName);
-
-        if ($mapping === null) {
-            throw new MappingNotFoundException(sprintf('Mapping not found for field "%s"', $fieldName));
-        }
-
-        return $mapping;
-    }
-
     protected function hasUploadedFile($obj, PropertyMapping $mapping)
     {
         $file = $mapping->getFile($obj);
 
-        return $file !== null & $file instanceof UploadedFile;
+        return null !== $file && $file instanceof UploadedFile;
     }
 }

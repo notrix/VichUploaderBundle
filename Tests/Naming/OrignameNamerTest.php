@@ -14,16 +14,17 @@ class OrignameNamerTest extends TestCase
 {
     public function fileDataProvider()
     {
-        return array(
-            array('file.jpeg', '/[a-z0-9]{13}_file.jpeg/'),
-            array('file', '/[a-z0-9]{13}_file/'),
-        );
+        return [
+            ['file.jpeg', '/[a-z0-9]{13}_file.jpeg/', false],
+            ['file',      '/[a-z0-9]{13}_file/',      false],
+            ['Yéöù.jpeg', '/[a-z0-9]{13}_yeou.jpeg/', true],
+        ];
     }
 
     /**
      * @dataProvider fileDataProvider
      */
-    public function testNameReturnsAnUniqueName($name, $pattern)
+    public function testNameReturnsAnUniqueName($name, $pattern, $transliterate)
     {
         $file = $this->getUploadedFileMock();
         $file
@@ -42,6 +43,7 @@ class OrignameNamerTest extends TestCase
             ->will($this->returnValue($file));
 
         $namer = new OrignameNamer();
+        $namer->configure(['transliterate' => $transliterate]);
 
         $this->assertRegExp($pattern, $namer->name($entity, $mapping));
     }

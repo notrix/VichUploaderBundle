@@ -5,7 +5,7 @@ To create a custom file namer, simply implement the `Vich\UploaderBundle\Naming\
 and in the `name` method of your class return the desired file name. Since your entity
 is passed to the `name` method, as well as the mapping describing it, you are
 free to get any information from it to create the name, or inject any other
-services you require.
+service you require.
 
 **Note**:
 
@@ -31,4 +31,4 @@ Where `my.namer.product` is the configured id of the service.
 ## That was it!
 
 Check out the docs for information on how to use the bundle! [Return to the
-index.](Resources/doc/index.md)
+index.](/Resources/doc/index.md)

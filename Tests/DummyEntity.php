@@ -6,8 +6,8 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 /**
  * @Vich\Uploadable
-  *
-  * @author Dustin Dobervich <ddobervich@gmail.com>
+ *
+ * @author Dustin Dobervich <ddobervich@gmail.com>
  */
 class DummyEntity
 {
@@ -17,6 +17,10 @@ class DummyEntity
     protected $file;
 
     protected $fileName;
+
+    protected $size;
+
+    public $someProperty;
 
     public function getFile()
     {
@@ -36,5 +40,20 @@ class DummyEntity
     public function setFileName($fileName)
     {
         $this->fileName = $fileName;
+    }
+
+    public function getSize()
+    {
+        return $this->size;
+    }
+
+    public function setSize($size)
+    {
+        $this->size = $size;
+    }
+
+    public function generateFileName()
+    {
+        return 'generated-file-name';
     }
 }

@@ -2,15 +2,18 @@
 
 namespace Vich\UploaderBundle\Tests\Mapping;
 
+use Vich\TestBundle\Entity\Article;
 use Vich\UploaderBundle\Mapping\PropertyMapping;
+use Vich\UploaderBundle\Naming\NamerInterface;
 use Vich\UploaderBundle\Tests\DummyEntity;
+use Vich\UploaderBundle\Tests\TestCase;
 
 /**
  * PropertyMappingTest.
  *
  * @author Dustin Dobervich <ddobervich@gmail.com>
  */
-class PropertyMappingTest extends \PHPUnit_Framework_TestCase
+class PropertyMappingTest extends TestCase
 {
     /**
      * Test that the configured mappings are accessed
@@ -20,20 +23,14 @@ class PropertyMappingTest extends \PHPUnit_Framework_TestCase
     {
         $object = new DummyEntity();
         $prop = new PropertyMapping('file', 'fileName');
-        $prop->setMapping(array(
-            'upload_destination'    => '/tmp',
-            'delete_on_remove'      => true,
-            'delete_on_update'      => true,
-            'inject_on_load'        => false,
-        ));
+        $prop->setMapping([
+            'upload_destination' => '/tmp',
+        ]);
 
         $this->assertEquals('', $prop->getUploadDir($object));
         $this->assertEquals('/tmp', $prop->getUploadDestination());
         $this->assertEquals('file', $prop->getFilePropertyName());
         $this->assertEquals('fileName', $prop->getFileNamePropertyName());
-        $this->assertTrue($prop->getDeleteOnRemove());
-        $this->assertTrue($prop->getDeleteOnUpdate());
-        $this->assertFalse($prop->getInjectOnLoad());
     }
 
     /**
@@ -54,15 +51,15 @@ class PropertyMappingTest extends \PHPUnit_Framework_TestCase
         $object->setFileName('joe.png');
         $object->setFile($date);
 
-        $array = array(
-            'fileName'  => 'joe.png',
-            'file'      => $date,
-        );
+        $array = [
+            'fileName' => 'joe.png',
+            'file' => $date,
+        ];
 
-        return array(
-            array( $object, $date, 'joe.png' ),
-            array( $array,  $date, 'joe.png' ),
-        );
+        return [
+            [$object, $date, 'joe.png'],
+            [$array, $date, 'joe.png'],
+        ];
     }
 
     public function testPropertiesAreSet()
@@ -85,11 +82,11 @@ class PropertyMappingTest extends \PHPUnit_Framework_TestCase
     {
         $object = new DummyEntity();
         $prop = new PropertyMapping('file', 'fileName');
-        $prop->setMapping(array(
+        $prop->setMapping([
             'upload_destination' => '/tmp',
-        ));
+        ]);
 
-        $namer = $this->getMock('Vich\UploaderBundle\Naming\DirectoryNamerInterface');
+        $namer = $this->createMock('Vich\UploaderBundle\Naming\DirectoryNamerInterface');
         $namer
             ->expects($this->once())
             ->method('directoryName')
@@ -102,14 +99,114 @@ class PropertyMappingTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('/tmp', $prop->getUploadDestination());
     }
 
+    public function testReadProperty()
+    {
+        $object = new DummyEntity();
+        $object->setSize(100);
+        $prop = new PropertyMapping('file', 'fileName', ['size' => 'size']);
+
+        $this->assertEquals(100, $prop->readProperty($object, 'size'));
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testReadUnknownProperty()
+    {
+        $object = new DummyEntity();
+        $prop = new PropertyMapping('file', 'fileName');
+
+        $prop->readProperty($object, 'unused');
+    }
+
+    public function testWriteProperty()
+    {
+        $object = new DummyEntity();
+        $prop = new PropertyMapping('file', 'fileName', ['size' => 'size']);
+        $prop->writeProperty($object, 'size', 100);
+
+        $this->assertEquals(100, $object->getSize());
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testWriteUnknownProperty()
+    {
+        $object = new DummyEntity();
+        $prop = new PropertyMapping('file', 'fileName');
+
+        $prop->writeProperty($object, 'unused', null);
+    }
+
+    public function testGetUploadNameWithNamer()
+    {
+        $object = new DummyEntity();
+        $prop = new PropertyMapping('file', 'fileName');
+
+        $namer = $this->createMock(NamerInterface::class);
+        $namer
+            ->expects($this->once())
+            ->method('name')
+            ->with($object, $prop)
+            ->will($this->returnValue('123'));
+
+        $prop->setNamer($namer);
+
+        $this->assertEquals('123', $prop->getUploadName($object));
+    }
+
+    public function testGetUploadNameWithoutNamer()
+    {
+        $object = new DummyEntity();
+        $prop = new PropertyMapping('file', 'fileName');
+
+        $file = $this->getUploadedFileMock();
+        $file
+            ->expects($this->once())
+            ->method('getClientOriginalName')
+            ->will($this->returnValue('filename'));
+
+        $object->setFile($file);
+
+        $this->assertEquals('filename', $prop->getUploadName($object));
+    }
+
     public function directoryProvider()
     {
-        return array(
-            array( 'other_dir', 'other_dir' ),
-            array( 'other_dir/', 'other_dir' ),
-            array( 'other_dir\\', 'other_dir' ),
-            array( 'other_dir\\sub_dir', 'other_dir\\sub_dir' ),
-            array( 'other_dir\\sub_dir\\', 'other_dir\\sub_dir' ),
+        return [
+            ['other_dir', 'other_dir'],
+            ['other_dir/', 'other_dir'],
+            ['other_dir\\', 'other_dir'],
+            ['other_dir\\sub_dir', 'other_dir\\sub_dir'],
+            ['other_dir\\sub_dir\\', 'other_dir\\sub_dir'],
+        ];
+    }
+
+    public function testErase()
+    {
+        $object = new Article();
+
+        $object->setImageName('generated.jpeg');
+        $object->setOriginalNameField('original.jpeg');
+        $object->setMimeTypeField('image/jpeg');
+        $object->setSizeField(100);
+
+        $prop = new PropertyMapping(
+            'image',
+            'imageName',
+            [
+                'size' => 'sizeField',
+                'mimeType' => 'mimeTypeField',
+                'originalName' => 'originalNameField',
+            ]
         );
+
+        $prop->erase($object);
+
+        $this->assertNull($object->getImageName());
+        $this->assertNull($object->getOriginalNameField());
+        $this->assertNull($object->getMimeTypeField());
+        $this->assertNull($object->getSizeField());
     }
 }

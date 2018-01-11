@@ -2,15 +2,16 @@
 
 namespace Vich\UploaderBundle\Tests\Adapter\ODM\MongoDB;
 
-use Vich\UploaderBundle\Tests\DummyEntity;
+use PHPUnit\Framework\TestCase;
 use Vich\UploaderBundle\Adapter\ODM\MongoDB\MongoDBAdapter;
+use Vich\UploaderBundle\Tests\DummyEntity;
 
 /**
  * MongoDBAdapterTest.
  *
  * @author Dustin Dobervich <ddobervich@gmail.com>
  */
-class MongoDBAdapterTest extends \PHPUnit_Framework_TestCase
+class MongoDBAdapterTest extends TestCase
 {
     public static function setUpBeforeClass()
     {

@@ -12,7 +12,7 @@ use Vich\UploaderBundle\Storage\FileSystemStorage;
 class FileSystemStorageTest extends StorageTestCase
 {
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     protected function getStorage()
     {
@@ -23,7 +23,7 @@ class FileSystemStorageTest extends StorageTestCase
      * Tests the upload method skips a mapping which has a non
      * uploadable property value.
      *
-     * @expectedException   LogicException
+     * @expectedException   \LogicException
      * @dataProvider        invalidFileProvider
      * @group               upload
      */
@@ -70,7 +70,7 @@ class FileSystemStorageTest extends StorageTestCase
     }
 
     /**
-     * Test the remove method skips trying to remove a file that no longer exists
+     * Test the remove method skips trying to remove a file that no longer exists.
      */
     public function testRemoveSkipsNonExistingFile()
     {
@@ -100,7 +100,7 @@ class FileSystemStorageTest extends StorageTestCase
             ->will($this->returnValue('test.txt'));
 
         $this->storage->remove($this->object, $this->mapping);
-        $this->assertFalse($this->root->hasChild('uploads' . DIRECTORY_SEPARATOR . 'test.txt'));
+        $this->assertFalse($this->root->hasChild('uploads'.DIRECTORY_SEPARATOR.'test.txt'));
     }
 
     /**
@@ -134,6 +134,32 @@ class FileSystemStorageTest extends StorageTestCase
         $this->assertEquals(sprintf('/tmp%sfile.txt', DIRECTORY_SEPARATOR), $path);
     }
 
+    /**
+     * Test the resolve path method.
+     */
+    public function testResolveRelativePath()
+    {
+        $this->mapping
+            ->expects($this->once())
+            ->method('getUploadDir')
+            ->will($this->returnValue('upload_dir'));
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('getFileName')
+            ->will($this->returnValue('file.txt'));
+
+        $this->factory
+            ->expects($this->once())
+            ->method('fromField')
+            ->with($this->object, 'file_field')
+            ->will($this->returnValue($this->mapping));
+
+        $path = $this->storage->resolvePath($this->object, 'file_field', null, true);
+
+        $this->assertEquals(sprintf('upload_dir%sfile.txt', DIRECTORY_SEPARATOR), $path);
+    }
+
     public function testResolveUriReturnsNullIfNoFile()
     {
         $this->mapping
@@ -151,7 +177,7 @@ class FileSystemStorageTest extends StorageTestCase
     }
 
     /**
-     * Test the resolve uri
+     * Test the resolve uri.
      *
      * @dataProvider resolveUriDataProvider
      */
@@ -183,31 +209,59 @@ class FileSystemStorageTest extends StorageTestCase
         $this->assertEquals($uri, $path);
     }
 
+    public function testResolveStream()
+    {
+        $this->mapping
+            ->expects($this->once())
+            ->method('getUploadDir')
+            ->will($this->returnValue(''));
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('getUploadDestination')
+            ->will($this->returnValue($this->root->url().'/uploads'));
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('getFileName')
+            ->will($this->returnValue('test.txt'));
+
+        $this->factory
+            ->expects($this->once())
+            ->method('fromField')
+            ->with($this->object, 'file_field')
+            ->will($this->returnValue($this->mapping));
+
+        $stream = $this->storage->resolveStream($this->object, 'file_field', null);
+
+        $this->assertNotEmpty($stream);
+    }
+
     public function resolveUriDataProvider()
     {
-        return array(
-            array(
+        return [
+            [
                 '',
-                '/uploads/file.txt'
-            ),
-            array(
+                '/uploads/file.txt',
+            ],
+            [
                 'dir',
-                '/uploads/dir/file.txt'
-            ),
-            array(
+                '/uploads/dir/file.txt',
+            ],
+            [
                 'dir/sub-dir',
-                '/uploads/dir/sub-dir/file.txt'
-            ),
-            array(
+                '/uploads/dir/sub-dir/file.txt',
+            ],
+            [
                 'dir\\sub-dir',
-                '/uploads/dir/sub-dir/file.txt'
-            ),
-        );
+                '/uploads/dir/sub-dir/file.txt',
+            ],
+        ];
     }
 
     /**
      * @dataProvider filenameWithDirectoriesDataProvider
-     * @group               upload
+     * @group upload
      */
     public function testUploadedFileIsCorrectlyMoved($uploadDir, $dir, $expectedDir)
     {
@@ -231,6 +285,12 @@ class FileSystemStorageTest extends StorageTestCase
 
         $this->mapping
             ->expects($this->once())
+            ->method('getUploadName')
+            ->with($this->object)
+            ->will($this->returnValue('filename.txt'));
+
+        $this->mapping
+            ->expects($this->once())
             ->method('getUploadDir')
             ->with($this->object)
             ->will($this->returnValue($dir));
@@ -245,23 +305,23 @@ class FileSystemStorageTest extends StorageTestCase
 
     public function filenameWithDirectoriesDataProvider()
     {
-        return array(
+        return [
             // upload dir, dir, expected dir
-            array(
+            [
                 '/root_dir',
                 '',
                 '/root_dir/',
-            ),
-            array(
+            ],
+            [
                 '/root_dir',
                 'dir_1',
                 '/root_dir/dir_1',
-            ),
-            array(
+            ],
+            [
                 '/root_dir',
                 'dir_1/dir_2',
                 '/root_dir/dir_1/dir_2',
-            ),
-        );
+            ],
+        ];
     }
 }

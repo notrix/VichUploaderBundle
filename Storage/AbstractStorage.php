@@ -15,14 +15,14 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 abstract class AbstractStorage implements StorageInterface
 {
     /**
-     * @var \Vich\UploaderBundle\Mapping\PropertyMappingFactory $factory
+     * @var PropertyMappingFactory
      */
     protected $factory;
 
     /**
      * Constructs a new instance of FileSystemStorage.
      *
-     * @param \Vich\UploaderBundle\Mapping\PropertyMappingFactory $factory The factory.
+     * @param PropertyMappingFactory $factory The factory
      */
     public function __construct(PropertyMappingFactory $factory)
     {
@@ -30,110 +30,126 @@ abstract class AbstractStorage implements StorageInterface
     }
 
     /**
-     * Do real upload
+     * Do real upload.
      *
      * @param PropertyMapping $mapping
      * @param UploadedFile    $file
      * @param string          $dir
      * @param string          $name
      *
-     * @return boolean
+     * @return bool
      */
     abstract protected function doUpload(PropertyMapping $mapping, UploadedFile $file, $dir, $name);
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function upload($obj, PropertyMapping $mapping)
     {
         $file = $mapping->getFile($obj);
 
-        if ($file === null || !($file instanceof UploadedFile)) {
+        if (null === $file || !($file instanceof UploadedFile)) {
             throw new \LogicException('No uploadable file found');
         }
 
-        // determine the file's name
-        if ($mapping->hasNamer()) {
-            $name = $mapping->getNamer()->name($obj, $mapping);
-        } else {
-            $name = $file->getClientOriginalName();
+        $name = $mapping->getUploadName($obj);
+        $mapping->setFileName($obj, $name);
+
+        $accessors = [
+            'size' => 'getSize',
+            'mimeType' => 'getMimeType',
+            'originalName' => 'getClientOriginalName',
+        ];
+
+        foreach ($accessors as $property => $accessor) {
+            $mapping->writeProperty($obj, $property, $file->$accessor());
         }
 
-        $mapping->setFileName($obj, $name);
-        
-        // determine the file's directory
         $dir = $mapping->getUploadDir($obj);
 
         $this->doUpload($mapping, $file, $dir, $name);
     }
 
     /**
-     * Do real remove
+     * Do real remove.
      *
      * @param PropertyMapping $mapping
      * @param string          $dir
      * @param string          $name
      *
-     * @return boolean
+     * @return bool
      */
     abstract protected function doRemove(PropertyMapping $mapping, $dir, $name);
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function remove($obj, PropertyMapping $mapping)
     {
         $name = $mapping->getFileName($obj);
 
-        // the non-strict comparison is done on purpose: we want to skip
-        // null and empty filenames
-        if (null == $name) {
-            return;
+        if (empty($name)) {
+            return false;
         }
 
-        $this->doRemove($mapping, $mapping->getUploadDir($obj), $name);
+        return $this->doRemove($mapping, $mapping->getUploadDir($obj), $name);
     }
 
     /**
-     * Do resolve path
+     * Do resolve path.
      *
-     * @param PropertyMapping $mapping
-     * @param string          $dir
-     * @param string          $name
+     * @param PropertyMapping $mapping  The mapping representing the field
+     * @param string          $dir      The directory in which the file is uploaded
+     * @param string          $name     The file name
+     * @param bool            $relative Whether the path should be relative or absolute
      *
      * @return string
      */
-    abstract protected function doResolvePath(PropertyMapping $mapping, $dir, $name);
+    abstract protected function doResolvePath(PropertyMapping $mapping, $dir, $name, $relative = false);
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
-    public function resolvePath($obj, $fieldName, $className = null)
+    public function resolvePath($obj, $fieldName, $className = null, $relative = false)
     {
         list($mapping, $filename) = $this->getFilename($obj, $fieldName, $className);
 
         if (empty($filename)) {
-            return null;
+            return;
         }
 
-        return $this->doResolvePath($mapping, $mapping->getUploadDir($obj), $filename);
+        return $this->doResolvePath($mapping, $mapping->getUploadDir($obj), $filename, $relative);
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function resolveUri($obj, $fieldName, $className = null)
     {
         list($mapping, $filename) = $this->getFilename($obj, $fieldName, $className);
 
         if (empty($filename)) {
-            return null;
+            return;
         }
 
         $dir = $mapping->getUploadDir($obj);
-        $path = !empty($dir) ? $dir . '/' .$filename : $filename;
+        $path = !empty($dir) ? $dir.'/'.$filename : $filename;
 
-        return $mapping->getUriPrefix() . '/' . $path;
+        return $mapping->getUriPrefix().'/'.$path;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function resolveStream($obj, $fieldName, $className = null)
+    {
+        $path = $this->resolvePath($obj, $fieldName, $className);
+
+        if (empty($path)) {
+            return;
+        }
+
+        return fopen($path, 'rb');
     }
 
     /**
@@ -143,10 +159,10 @@ abstract class AbstractStorage implements StorageInterface
     {
         $mapping = $this->factory->fromField($obj, $fieldName, $className);
 
-        if ($mapping === null) {
+        if (null === $mapping) {
             throw new MappingNotFoundException(sprintf('Mapping not found for field "%s"', $fieldName));
         }
 
-        return array($mapping, $mapping->getFileName($obj));
+        return [$mapping, $mapping->getFileName($obj)];
     }
 }

@@ -7,23 +7,28 @@ Add VichUploaderBundle by running this command from the terminal at the root of
 your Symfony project:
 
 ```bash
-php composer.phar require vich/uploader-bundle 
+composer require vich/uploader-bundle
 ```
 
+Alternatively, you can add the requirement `"vich/uploader-bundle": "^1.6"` to your composer.json and run `composer update`.
+This could be useful when the installation of VichUploaderBundle is not compatible with some currently installed dependencies. Anyway, the previous option is the preferred way, since composer can pick the best requirement constraint for you.
 
 ## Enable the bundle
 
 To start using the bundle, register the bundle in your application's kernel class:
 
-``` php
+```php
 // app/AppKernel.php
-public function registerBundles()
+class AppKernel extends Kernel
 {
-    $bundles = array(
-        // ...
-        new Vich\UploaderBundle\VichUploaderBundle(),
-        // ...
-    );
+    public function registerBundles()
+    {
+        $bundles = [
+            // ...
+            new Vich\UploaderBundle\VichUploaderBundle(),
+            // ...
+        ];
+    }
 }
 ```
 
@@ -32,15 +37,15 @@ public function registerBundles()
 
 Four engines are currently supported:
 
-  * [orm](http://www.doctrine-project.org/projects/orm.html) ;
-  * [mongodb](http://doctrine-mongodb-odm.readthedocs.org/en/latest/) ;
-  * [phpcr](http://doctrine-phpcr-odm.readthedocs.org/en/latest/) ;
+  * [orm](http://www.doctrine-project.org/projects/orm.html)
+  * [mongodb](http://doctrine-mongodb-odm.readthedocs.org/en/latest/)
+  * [phpcr](http://doctrine-phpcr-odm.readthedocs.org/en/latest/)
   * [propel](http://propelorm.org/Propel/).
 
 Once the chosen persistence engine is installed and configured, tell
 VichUploaderBundle that you want to use it.
 
-``` yaml
+```yaml
 # app/config/config.yml
 vich_uploader:
     db_driver: orm # or mongodb or propel or phpcr

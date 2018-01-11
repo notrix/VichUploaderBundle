@@ -10,6 +10,9 @@ is the only updated.
 A workaround to solve this issue is to manually generate a change:
 
 ```php
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+
 class Product
 {
     // ...
@@ -17,31 +20,25 @@ class Product
     /**
      * @ORM\Column(type="datetime")
      *
-     * @var \DateTime $updatedAt
+     * @var \DateTime
      */
-    protected $updatedAt;
+    private $updatedAt;
 
     // ...
 
-    public function setImage($image)
+    public function setImage(File $image = null)
     {
         $this->image = $image;
 
-        if ($this->image) {
+        // Only change the updated af if the file is really uploaded to avoid database updates.
+        // This is needed when the file should be set when loading the entity.
+        if ($this->image instanceof UploadedFile) {
             $this->updatedAt = new \DateTime('now');
         }
     }
 }
 ```
 See issue [GH-123](https://github.com/dustin10/VichUploaderBundle/issues/123)
-
-## Catchable Fatal Error
-
-When you get the following error:`Catchable Fatal Error: ... must be an instance of Symfony\Component\HttpFoundation\File\UploadedFile, string given, ...` 
-you have to define   
-`{{ form_enctype(upload_form) }}` in your form. 
-
-This is needed for Symfony versions older than 2.3.
 
 ## Annotations don't work with Propel
 
@@ -78,6 +75,13 @@ Consider the following class:
 
 ``` php
 <?php
+
+namespace Acme\DemoBundle\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\HttpFoundation\File\File;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
+
 /**
  * @ORM\Entity
  * @Vich\Uploadable
@@ -87,9 +91,9 @@ class Product
     /**
      * @Vich\UploadableField(mapping="product_image", fileNameProperty="imageName")
      *
-     * @var \Symfony\Component\HttpFoundation\File\File $image
+     * @var File
      */
-    protected $image;
+    private $image;
 
     /**
      * If manually uploading a file (i.e. not using Symfony Form) ensure an instance
@@ -98,11 +102,11 @@ class Product
      * must be able to accept an instance of 'File' as the bundle will inject one here
      * during Doctrine hydration.
      *
-     * @param \Symfony\Component\HttpFoundation\File\File $image
+     * @param File $image
      */
-    public function setImage(File $image)
+    public function setImage(File $image = null)
     {
-        $this->image = $image
+        $this->image = $image;
     }
 }
 ```
@@ -113,6 +117,8 @@ bundle will automatically inject an instance of `File` there. However if you wer
 the image path to a new image in that instance of `File` and attempted a `flush()` nothing
 would happen, instead inject a new instance of `UploadedFile` with the new path to your new
 image to sucessfully trigger the upload.
+
+**N.B** : UploadedFile objects have a [*test* mode](http://api.symfony.com/2.8/Symfony/Component/HttpFoundation/File/UploadedFile.html#method___construct) that can be used to simulate file uploads.
 
 ## Failed to set metadata before uploading the file
 

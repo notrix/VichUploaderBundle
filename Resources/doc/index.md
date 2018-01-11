@@ -33,6 +33,7 @@ Don't worry, it will be quick and easy (I promise!):
 
   * [Using Gaufrette as storage abstraction](storage/gaufrette.md)
   * [Using Flysystem as storage abstraction](storage/flysystem.md)
+  * [Using a custom storage](storage/custom.md)
 
 ### Mapping-related
 
@@ -44,9 +45,14 @@ Don't worry, it will be quick and easy (I promise!):
   * [Using the bundled file form type](form/vich_file_type.md)
   * [Using the bundled image form type](form/vich_image_type.md)
 
+### Download-related
+
+  * [Serving files with a controller](downloads/serving_files_with_a_controller.md)
+
 ## Useful resources
 
   * [Configuration reference](configuration_reference.md)
-  * [Events](../../Event/Events.php)
+  * [Events](events.md)
   * [Sandbox](https://github.com/K-Phoen/Vich-Uploader-Sandbox)
   * [Known issues](known_issues.md)
+  * [Symfony support policy](symfony_support_policy.md)

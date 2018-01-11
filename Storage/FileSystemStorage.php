@@ -3,7 +3,6 @@
 namespace Vich\UploaderBundle\Storage;
 
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-
 use Vich\UploaderBundle\Mapping\PropertyMapping;
 
 /**
@@ -14,17 +13,17 @@ use Vich\UploaderBundle\Mapping\PropertyMapping;
 class FileSystemStorage extends AbstractStorage
 {
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     protected function doUpload(PropertyMapping $mapping, UploadedFile $file, $dir, $name)
     {
-        $uploadDir = $mapping->getUploadDestination() . DIRECTORY_SEPARATOR . $dir;
+        $uploadDir = $mapping->getUploadDestination().DIRECTORY_SEPARATOR.$dir;
 
         return $file->move($uploadDir, $name);
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     protected function doRemove(PropertyMapping $mapping, $dir, $name)
     {
@@ -34,30 +33,34 @@ class FileSystemStorage extends AbstractStorage
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
-    protected function doResolvePath(PropertyMapping $mapping, $dir, $name)
+    protected function doResolvePath(PropertyMapping $mapping, $dir, $name, $relative = false)
     {
-        $path = !empty($dir) ? $dir . DIRECTORY_SEPARATOR . $name : $name;
+        $path = !empty($dir) ? $dir.DIRECTORY_SEPARATOR.$name : $name;
 
-        return $mapping->getUploadDestination() . DIRECTORY_SEPARATOR . $path;
+        if ($relative) {
+            return $path;
+        }
+
+        return $mapping->getUploadDestination().DIRECTORY_SEPARATOR.$path;
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function resolveUri($obj, $mappingName, $className = null)
     {
         list($mapping, $name) = $this->getFilename($obj, $mappingName, $className);
 
         if (empty($name)) {
-            return null;
+            return;
         }
 
         $uploadDir = $this->convertWindowsDirectorySeparator($mapping->getUploadDir($obj));
-        $uploadDir = empty($uploadDir) ? '' : $uploadDir . '/';
+        $uploadDir = empty($uploadDir) ? '' : $uploadDir.'/';
 
-        return sprintf('%s/%s', $mapping->getUriPrefix(), $uploadDir . $name);
+        return sprintf('%s/%s', $mapping->getUriPrefix(), $uploadDir.$name);
     }
 
     private function convertWindowsDirectorySeparator($string)

@@ -2,10 +2,10 @@
 
 namespace Vich\UploaderBundle\Tests\Handler;
 
+use Vich\TestBundle\Entity\Article;
 use Vich\UploaderBundle\Event\Event;
 use Vich\UploaderBundle\Event\Events;
 use Vich\UploaderBundle\Handler\UploadHandler;
-use Vich\UploaderBundle\Tests\DummyEntity;
 use Vich\UploaderBundle\Tests\TestCase;
 
 /**
@@ -17,19 +17,23 @@ class UploadHandlerTest extends TestCase
     protected $storage;
     protected $injector;
     protected $dispatcher;
-
+    protected $mapping;
+    /**
+     * @var Article
+     */
+    protected $object;
     protected $handler;
 
-    const FILE_FIELD = 'file_field';
+    const FILE_FIELD = 'image';
 
-    public function setUp()
+    protected function setUp()
     {
         $this->factory = $this->getPropertyMappingFactoryMock();
         $this->storage = $this->getStorageMock();
         $this->injector = $this->getInjectorMock();
         $this->dispatcher = $this->getDispatcherMock();
         $this->mapping = $this->getPropertyMappingMock();
-        $this->object = new DummyEntity();
+        $this->object = new Article();
 
         $this->handler = new UploadHandler($this->factory, $this->storage, $this->injector, $this->dispatcher);
         $this->factory
@@ -41,13 +45,7 @@ class UploadHandlerTest extends TestCase
 
     public function testUpload()
     {
-        $this->dispatcher
-            ->expects($this->any())
-            ->method('dispatch')
-            ->will($this->returnValueMap(array(
-                array(Events::PRE_UPLOAD, $this->validEvent(), null),
-                array(Events::POST_UPLOAD, $this->validEvent(), null),
-            )));
+        $this->expectEvents([Events::PRE_UPLOAD, Events::POST_UPLOAD]);
 
         $this->mapping
             ->expects($this->once())
@@ -66,6 +64,28 @@ class UploadHandlerTest extends TestCase
             ->with($this->object, $this->mapping);
 
         $this->handler->upload($this->object, self::FILE_FIELD);
+    }
+
+    /**
+     * @dataProvider methodProvider
+     * @expectedException \Vich\UploaderBundle\Exception\MappingNotFoundException
+     */
+    public function testAnExceptionIsThrownIfMappingIsntFound($method)
+    {
+        $this->factory = $this->getPropertyMappingFactoryMock();
+        $handler = new UploadHandler($this->factory, $this->storage, $this->injector, $this->dispatcher);
+
+        call_user_func([$handler, $method], $this->object, self::FILE_FIELD);
+    }
+
+    public function methodProvider()
+    {
+        return [
+            ['upload'],
+            ['inject'],
+            ['remove'],
+            ['clean'],
+        ];
     }
 
     public function testUploadSkipsEmptyObjects()
@@ -87,13 +107,7 @@ class UploadHandlerTest extends TestCase
 
     public function testInject()
     {
-        $this->dispatcher
-            ->expects($this->any())
-            ->method('dispatch')
-            ->will($this->returnValueMap(array(
-                array(Events::PRE_INJECT, $this->validEvent(), null),
-                array(Events::POST_INJECT, $this->validEvent(), null),
-            )));
+        $this->expectEvents([Events::PRE_INJECT, Events::POST_INJECT]);
 
         $this->injector
             ->expects($this->once())
@@ -105,19 +119,19 @@ class UploadHandlerTest extends TestCase
 
     public function testClean()
     {
-        $this->dispatcher
-            ->expects($this->any())
-            ->method('dispatch')
-            ->will($this->returnValueMap(array(
-                array(Events::PRE_REMOVE, $this->validEvent(), null),
-                array(Events::POST_REMOVE, $this->validEvent(), null),
-            )));
+        $this->expectEvents([Events::PRE_REMOVE, Events::POST_REMOVE]);
 
         $this->mapping
             ->expects($this->once())
             ->method('getFile')
             ->with($this->object)
             ->will($this->returnValue($this->getUploadedFileMock()));
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('getFileName')
+            ->with($this->object)
+            ->will($this->returnValue('something not null'));
 
         $this->storage
             ->expects($this->once())
@@ -129,6 +143,12 @@ class UploadHandlerTest extends TestCase
 
     public function testCleanSkipsEmptyObjects()
     {
+        $this->mapping
+            ->expects($this->any())
+            ->method('getFileName')
+            ->with($this->object)
+            ->will($this->returnValue('something not null'));
+
         $this->dispatcher
             ->expects($this->never())
             ->method('dispatch');
@@ -142,13 +162,19 @@ class UploadHandlerTest extends TestCase
 
     public function testRemove()
     {
-        $this->dispatcher
-            ->expects($this->any())
-            ->method('dispatch')
-            ->will($this->returnValueMap(array(
-                array(Events::PRE_REMOVE, $this->validEvent(), null),
-                array(Events::POST_REMOVE, $this->validEvent(), null),
-            )));
+        $this->expectEvents([Events::PRE_REMOVE, Events::POST_REMOVE]);
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('getFileName')
+            ->with($this->object)
+            ->will($this->returnValue('something not null'));
+
+        $this->mapping
+            ->expects($this->once())
+            ->method('erase')
+            ->with($this->object)
+            ->will($this->returnValue(null));
 
         $this->storage
             ->expects($this->once())
@@ -158,51 +184,52 @@ class UploadHandlerTest extends TestCase
         $this->handler->remove($this->object, self::FILE_FIELD);
     }
 
+    public function testRemoveWithEmptyObject()
+    {
+        $this->dispatcher
+            ->expects($this->never())
+            ->method('dispatch');
+
+        $this->storage
+            ->expects($this->never())
+            ->method('remove')
+            ->with($this->object, $this->mapping);
+
+        $this->handler->remove($this->object, self::FILE_FIELD);
+    }
+
     protected function getStorageMock()
     {
-        return $this->getMock('Vich\UploaderBundle\Storage\StorageInterface');
+        return $this->createMock('Vich\UploaderBundle\Storage\StorageInterface');
     }
 
     protected function getInjectorMock()
     {
-        return $this->getMock('Vich\UploaderBundle\Injector\FileInjectorInterface');
+        return $this->createMock('Vich\UploaderBundle\Injector\FileInjectorInterface');
     }
 
     protected function getDispatcherMock()
     {
-        return $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
-    }
-
-    /**
-     * Creates a mock property mapping factory
-     *
-     * @return \Vich\UploaderBundle\Mapping\PropertyMappingFactory
-     */
-    protected function getPropertyMappingFactoryMock()
-    {
-        return $this->getMockBuilder('Vich\UploaderBundle\Mapping\PropertyMappingFactory')
-            ->disableOriginalConstructor()
-            ->getMock();
-    }
-
-    /**
-     * Gets a mock property mapping.
-     *
-     * @return \Vich\UploaderBundle\Mapping\PropertyMapping
-     */
-    protected function getPropertyMappingMock()
-    {
-        return $this->getMockBuilder('Vich\UploaderBundle\Mapping\PropertyMapping')
-            ->disableOriginalConstructor()
-            ->getMock();
+        return $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
     }
 
     protected function validEvent()
     {
         $object = $this->object;
+        $mapping = $this->mapping;
 
-        return $this->callback(function ($event) use ($object) {
-            return $event instanceof Event && $event->getObject() === $object;
+        return $this->callback(function ($event) use ($object, $mapping) {
+            return $event instanceof Event && $event->getObject() === $object && $event->getMapping() === $mapping;
         });
+    }
+
+    protected function expectEvents(array $events)
+    {
+        foreach ($events as $i => $event) {
+            $this->dispatcher
+                ->expects($this->at($i))
+                ->method('dispatch')
+                ->with($event, $this->validEvent());
+        }
     }
 }

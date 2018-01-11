@@ -2,14 +2,15 @@
 
 namespace Vich\UploaderBundle\Tests\Adapter\Propel;
 
+use PHPUnit\Framework\TestCase;
 use Vich\UploaderBundle\Adapter\Propel\PropelORMAdapter;
 
 /**
- * PropelORMAdapterTest
+ * PropelORMAdapterTest.
  *
  * @author Kévin Gomez <contact@kevingomez.fr>
  */
-class PropelORMAdapterTest extends \PHPUnit_Framework_TestCase
+class PropelORMAdapterTest extends TestCase
 {
     protected $adapter;
 
@@ -20,14 +21,14 @@ class PropelORMAdapterTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function setUp()
+    protected function setUp()
     {
         $this->adapter = new PropelORMAdapter();
     }
 
     public function testGetObjectFromArgs()
     {
-        $event = $this->getMock('\Symfony\Component\EventDispatcher\GenericEvent');
+        $event = $this->createMock('\Symfony\Component\EventDispatcher\GenericEvent');
         $event
             ->expects($this->once())
             ->method('getSubject')
@@ -38,9 +39,10 @@ class PropelORMAdapterTest extends \PHPUnit_Framework_TestCase
 
     public function testRecomputeChangeset()
     {
-        $event = $this->getMock('\Symfony\Component\EventDispatcher\GenericEvent');
+        $event = $this->createMock('\Symfony\Component\EventDispatcher\GenericEvent');
 
         // does nothing but should be callable
         $this->adapter->recomputeChangeSet($event);
+        $this->assertTrue(true);    // this workaround is needed to avoid Risky test
     }
 }

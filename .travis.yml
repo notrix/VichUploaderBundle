@@ -1,29 +1,47 @@
 language: php
 
 php:
-  - 5.3
-  - 5.4
-  - 5.5
-  - 5.6
+    - 7.0
+    - 7.1
+    - 7.2
+    - nightly
 
 sudo: false
 
+cache:
+    directories:
+        - $HOME/.composer/cache
+
 env:
-    - SYMFONY_VERSION="~2.3.0" DOCTRINE_VERSION=">=2.2.3,<2.5-dev"
-    - SYMFONY_VERSION="~2.4.0" DOCTRINE_VERSION=">=2.2.3,<2.5-dev"
-    - SYMFONY_VERSION="~2.5.0" DOCTRINE_VERSION=">=2.2.3,<2.5-dev"
-    - SYMFONY_VERSION="2.6.x-dev" DOCTRINE_VERSION=">=2.2.3,<2.5-dev"
-    - SYMFONY_VERSION="2.7.x-dev" DOCTRINE_VERSION=">=2.2.3,<2.5-dev"
+    - SYMFONY_VERSION="~2.8.0"
 
-before_script:
-    - phpenv config-rm xdebug.ini
-    - echo "extension=mongo.so" >> `php --ini | grep "Loaded Configuration" | sed -e "s|.*:\s*||"`
-    - composer require --no-update symfony/symfony:${SYMFONY_VERSION}
-    - composer require --no-update "doctrine/orm":"${DOCTRINE_VERSION}"
-    - composer install --prefer-source
+matrix:
+    include:
+        - php: 7.1
+          env: VALIDATE_DOCS=true
+        - php: 7.0
+          env: COMPOSER_FLAGS="--prefer-lowest"
+        - php: 7.1
+          env: SYMFONY_VERSION="~3.3.0"
+        - php: 7.2
+          env: SYMFONY_VERSION="~3.4.0"
+        - php: 7.1
+          env: SYMFONY_VERSION="~2.8.0" WITH_LIIP_IMAGINE=true
+        - php: 7.1
+          env: SYMFONY_VERSION="~4.0.0" WITH_LIIP_IMAGINE=true
+    allow_failures:
+        - php: nightly
 
-script: vendor/bin/phpunit
+before_install:
+    - composer self-update
+    - phpenv config-rm xdebug.ini || true
+    - composer config platform.ext-mongo 1.6.14
+    - if [ "$SYMFONY_VERSION" != "" ]; then composer require --no-update symfony/symfony:${SYMFONY_VERSION}; fi
+    - if [ "$WITH_LIIP_IMAGINE" = true ] ; then composer require --no-update liip/imagine-bundle:"^1.7|^2.0@dev"; fi;
+    - if [ "$VALIDATE_DOCS" = true ]; then composer require --dev --no-update kphoen/rusty dev-master; fi
 
-notifications:
-  email:
-    - tassi.francesco@gmail.com
+install: php -d memory_limit=-1 $(phpenv which composer) update $COMPOSER_FLAGS --no-suggest --prefer-dist
+
+script:
+    - if [ "$VALIDATE_DOCS" != true ]; then ./vendor/bin/phpunit; fi
+    - if [ "$VALIDATE_DOCS" = true ]; then php ./vendor/bin/rusty check --no-execute ./Resources/doc; fi
