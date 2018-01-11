@@ -74,23 +74,10 @@ class VichUploaderExtensionTest extends AbstractExtensionTestCase
                     'delete_on_remove' => true,
                     'delete_on_update' => true,
                     'inject_on_load' => true,
+                    'db_connection' => null,
                 ],
             ],
         ]);
-        $this->load(array(
-            'mappings' => $mappings = array(
-                'foo' => array(
-                    'upload_destination'    => 'web/',
-                    'uri_prefix'            => '/',
-                    'namer'                 => null,
-                    'directory_namer'       => null,
-                    'delete_on_remove'      => true,
-                    'delete_on_update'      => true,
-                    'inject_on_load'        => true,
-                    'db_connection'         => null,
-                )
-            ),
-        ));
 
         // the default db_driver is copied into the mapping
         $mappings['foo']['db_driver'] = 'propel';
@@ -112,23 +99,10 @@ class VichUploaderExtensionTest extends AbstractExtensionTestCase
                     'delete_on_update' => true,
                     'inject_on_load' => true,
                     'db_driver' => 'orm',
+                    'db_connection' => null,
                 ],
             ],
         ]);
-            'mappings' => $mappings = array(
-                'foo' => array(
-                    'upload_destination'    => 'web/',
-                    'uri_prefix'            => '/',
-                    'namer'                 => null,
-                    'directory_namer'       => null,
-                    'delete_on_remove'      => true,
-                    'delete_on_update'      => true,
-                    'inject_on_load'        => true,
-                    'db_driver'             => 'orm',
-                    'db_connection'         => null,
-                )
-            ),
-        ));
 
         $this->assertContainerBuilderHasParameter('vich_uploader.mappings', $mappings);
     }

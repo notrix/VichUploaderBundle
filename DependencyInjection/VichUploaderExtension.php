@@ -209,7 +209,6 @@ class VichUploaderExtension extends Extension
         return $mapping;
     }
 
-    protected function createListener(ContainerBuilder $container, $name, $type, $driver, $priority = 0)
     protected function createListener(ContainerBuilder $container, $name, $type, $driver, $priority = 0, $connection = null)
     {
         $definitionClassname = $this->getDefinitionClassname();
@@ -220,8 +219,7 @@ class VichUploaderExtension extends Extension
 
         // propel does not require tags to work
         if (isset($this->tagMap[$driver])) {
-            $definition->addTag($this->tagMap[$driver], array('priority' => $priority, 'connection' => $connection));
-            $definition->addTag($this->tagMap[$driver], ['priority' => $priority]);
+            $definition->addTag($this->tagMap[$driver], ['priority' => $priority, 'connection' => $connection]);
         }
     }
 
